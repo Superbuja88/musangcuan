@@ -28,9 +28,9 @@
     {
       "ticker": "AVGO",
       "name": "Broadcom Inc",
-      "qty": 0.21,
-      "avg": 1590,
-      "cur": 1719.38,
+      "qty": 0.989176652,
+      "avg": 340,
+      "cur": 360.45,
       "color": "#cc0000",
       "dca": false
     },
