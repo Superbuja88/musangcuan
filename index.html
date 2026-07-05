@@ -445,6 +445,13 @@ async function ghLoad(){
 async function ghSave(data){
   if(!ghToken) return false;
   try{
+    // Always fetch current SHA before saving to avoid conflict errors
+    if(!ghSHA){
+      const res = await fetch(GH_API,{
+        headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}
+      });
+      if(res.ok){ const j=await res.json(); ghSHA=j.sha; }
+    }
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))));
     const body = {
       message:'Portfolio update '+new Date().toLocaleDateString('id-ID'),
@@ -460,11 +467,11 @@ async function ghSave(data){
       },
       body:JSON.stringify(body)
     });
-    if(!res.ok) return false;
+    if(!res.ok){ console.error('ghSave failed', res.status, await res.text()); return false; }
     const result = await res.json();
     ghSHA = result.content.sha;
     return true;
-  }catch(e){ return false; }
+  }catch(e){ console.error('ghSave error',e); return false; }
 }
 
 // Local fallback
@@ -1056,13 +1063,22 @@ function rAll(){
 bindEvents();
 rAll(); // render with local data first (fast)
 
-// Then load from GitHub if token exists
 if(ghToken){
-  ghLoad().then(data=>{
-    if(data){ D=data; saveLocal(D); rAll(); }
-  });
+  const hasLocal = localStorage.getItem(SK) !== null;
+  if(hasLocal){
+    // 로컬 데이터 있으면 — GitHub에서 SHA만 가져옴 (덮어쓰기 금지)
+    fetch(GH_API,{headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}})
+      .then(r=>r.ok?r.json():null)
+      .then(j=>{ if(j&&j.sha) ghSHA=j.sha; })
+      .catch(()=>{});
+  } else {
+    // 로컬 데이터 없음 (새 기기) — GitHub에서 전체 데이터 로드
+    ghLoad().then(data=>{
+      if(data){ D=data; saveLocal(D); rAll(); }
+    });
+  }
 } else {
-  // First time — show token setup
+  // 토큰 없음 — 설정 팝업 표시
   setTimeout(()=>document.getElementById('tokenModal').classList.add('open'), 800);
 }
 </script>
