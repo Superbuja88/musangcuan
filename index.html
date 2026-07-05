@@ -59,6 +59,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .ug-inp.tf{font-family:'Inter',sans-serif}
 .btn-apply{width:100%;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-top:6px}
 .btn-hist{width:100%;background:var(--green-lt);color:var(--green);border:1px solid rgba(0,168,107,.2);border-radius:10px;padding:10px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-top:6px}
+.btn-export{width:100%;background:#fff3e0;color:#e65100;border:1px solid rgba(230,81,0,.2);border-radius:10px;padding:10px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-top:6px}
+.btn-token{width:100%;background:#f3f0ff;color:#6741d9;border:1px solid rgba(103,65,217,.2);border-radius:10px;padding:10px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-top:6px}
 
 /* SECTION */
 .sec{padding:16px 14px 0}
@@ -229,6 +231,23 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <div><div class="ug-lbl">Label Minggu</div><input class="ug-inp tf" id="uLbl" type="text" style="width:100%"></div>
     <button class="btn-apply" id="btnApply">⚡ Update Tampilan</button>
     <button class="btn-hist" id="btnHist">💾 Simpan ke Riwayat</button>
+    <button class="btn-export" id="btnExport">📋 Export Data (Backup)</button>
+    <button class="btn-token" id="btnToken">🔑 Setup GitHub Token</button>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-ov" id="exportModal">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">📋 Backup Data</div>
+    <p style="font-size:12px;color:var(--sub);margin-bottom:10px">Copy semua teks di bawah ini dan kirim ke Claude untuk backup permanen.</p>
+    <textarea id="exportText" readonly
+      style="width:100%;height:200px;font-size:11px;font-family:'JetBrains Mono',monospace;
+      padding:10px;border:1.5px solid var(--border);border-radius:10px;
+      resize:none;color:var(--text);background:var(--bg);outline:none"></textarea>
+    <button class="btn-ms" id="btnCopyExport" style="margin-top:10px">📋 Copy ke Clipboard</button>
+    <button class="btn-mc" id="btnCloseExport">Tutup</button>
   </div>
 </div>
 
@@ -358,6 +377,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 <div class="toast" id="toast"></div>
 
+<!-- TOKEN SETUP MODAL -->
+<div class="modal-ov" id="tokenModal">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">🔑 Setup GitHub Token</div>
+    <p style="font-size:12px;color:var(--sub);margin-bottom:12px;line-height:1.6">
+      Token diperlukan agar data tersimpan permanen di GitHub.<br>
+      Buat di: <strong>github.com/settings/tokens</strong><br>
+      (Generate new token classic → centang <strong>repo</strong> → No expiration)
+    </p>
+    <div class="mg">
+      <div class="m-lbl">GitHub Personal Access Token</div>
+      <input class="m-inp tf" id="tokenInput" type="password" placeholder="ghp_xxxxxxxxxxxx">
+    </div>
+    <button class="btn-ms" id="btnSaveToken">🔑 Simpan Token</button>
+    <button class="btn-mc" id="btnSkipToken">Lewati (simpan lokal saja)</button>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 // DATA
@@ -379,13 +417,75 @@ const DEF = {
   history:[{label:'Jun W4', port:3766.66, cost:3686.21, spy:729.98, qqq:706.52, fx:17860}]
 };
 
-function load(){
+// ═══════════════════════════════════════════
+// GITHUB API STORAGE
+// ═══════════════════════════════════════════
+const GH_OWNER = 'superbuja88';
+const GH_REPO  = 'musangcuan';
+const GH_FILE  = 'portfolio_data.json';
+const GH_API   = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+const TK_KEY   = 'mc_gh_token';
+
+let ghToken = localStorage.getItem(TK_KEY) || '';
+let ghSHA   = '';
+
+async function ghLoad(){
+  if(!ghToken) return null;
+  try{
+    const res = await fetch(GH_API, {
+      headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}
+    });
+    if(!res.ok) return null;
+    const j = await res.json();
+    ghSHA = j.sha;
+    return JSON.parse(atob(j.content.replace(/\n/g,'')));
+  }catch(e){ return null; }
+}
+
+async function ghSave(data){
+  if(!ghToken) return false;
+  try{
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))));
+    const body = {
+      message:'Portfolio update '+new Date().toLocaleDateString('id-ID'),
+      content
+    };
+    if(ghSHA) body.sha = ghSHA;
+    const res = await fetch(GH_API,{
+      method:'PUT',
+      headers:{
+        'Authorization':'token '+ghToken,
+        'Content-Type':'application/json',
+        'Accept':'application/vnd.github.v3+json'
+      },
+      body:JSON.stringify(body)
+    });
+    if(!res.ok) return false;
+    const result = await res.json();
+    ghSHA = result.content.sha;
+    return true;
+  }catch(e){ return false; }
+}
+
+// Local fallback
+function loadLocal(){
   try{const r=localStorage.getItem(SK);if(r)return JSON.parse(r);}catch(e){}
   return JSON.parse(JSON.stringify(DEF));
 }
-function save(d){try{localStorage.setItem(SK,JSON.stringify(d));}catch(e){}}
+function saveLocal(d){
+  try{localStorage.setItem(SK,JSON.stringify(d));}catch(e){}
+}
 
-let D = load();
+// Unified save — GitHub + local backup
+async function save(d){
+  saveLocal(d);
+  if(ghToken){
+    const ok = await ghSave(d);
+    if(!ok) showToast('⚠️ GitHub 저장 실패. 로컬에만 저장됨.');
+  }
+}
+
+let D = loadLocal();
 let lineChart = null;
 
 // ═══════════════════════════════════════════
@@ -862,12 +962,70 @@ function rChart(){
 }
 
 // ═══════════════════════════════════════════
+// EXPORT / BACKUP
+// ═══════════════════════════════════════════
+function openExport(){
+  const txt = JSON.stringify(D, null, 2);
+  document.getElementById('exportText').value = txt;
+  document.getElementById('exportModal').classList.add('open');
+}
+function closeExport(){
+  document.getElementById('exportModal').classList.remove('open');
+}
+function copyExport(){
+  const ta = document.getElementById('exportText');
+  ta.select();
+  try{
+    navigator.clipboard.writeText(ta.value).then(()=>showToast('✅ Data ter-copy! Kirim ke Claude.'));
+  }catch(e){
+    document.execCommand('copy');
+    showToast('✅ Data ter-copy! Kirim ke Claude.');
+  }
+}
+
+// ═══════════════════════════════════════════
+// TOKEN SETUP
+// ═══════════════════════════════════════════
+async function saveToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t){showToast('⚠️ Masukkan token dulu!');return;}
+  showToast('⏳ Mengecek token...');
+  ghToken = t;
+  // Test token by loading data
+  const data = await ghLoad();
+  if(data === null && ghSHA === ''){
+    // File doesn't exist yet — that's OK, first time
+    // Try a simple API call to verify token
+    try{
+      const test = await fetch('https://api.github.com/user',{
+        headers:{'Authorization':'token '+t}
+      });
+      if(!test.ok){showToast('❌ Token salah!');ghToken='';return;}
+    }catch(e){showToast('❌ Gagal terhubung');ghToken='';return;}
+  }
+  localStorage.setItem(TK_KEY, t);
+  document.getElementById('tokenModal').classList.remove('open');
+  showToast('✅ Token tersimpan! Data akan sync ke GitHub.');
+  if(data) { D = data; saveLocal(D); rAll(); }
+  else { await save(D); } // create file for first time
+}
+
+function openTokenModal(){
+  document.getElementById('tokenInput').value = ghToken;
+  document.getElementById('tokenModal').classList.add('open');
+}
+
+// ═══════════════════════════════════════════
 // BIND EVENTS (called once)
 // ═══════════════════════════════════════════
 function bindEvents(){
   document.getElementById('updToggle').onclick  = togUpd;
   document.getElementById('btnApply').onclick   = applyUpd;
   document.getElementById('btnHist').onclick    = saveHist;
+  document.getElementById('btnExport').onclick  = openExport;
+  document.getElementById('btnCopyExport').onclick = copyExport;
+  document.getElementById('btnCloseExport').onclick = closeExport;
+  document.getElementById('exportModal').onclick = e=>{if(e.target===e.currentTarget)closeExport();};
   document.getElementById('addBtn').onclick     = openModal;
   document.getElementById('btnModalSave').onclick   = addStock;
   document.getElementById('btnModalCancel').onclick = closeModal;
@@ -876,6 +1034,11 @@ function bindEvents(){
   document.getElementById('mQt').oninput  = mCalc;
   document.getElementById('mAv').oninput  = mCalc;
   document.getElementById('mCr').oninput  = mCalc;
+  // Token modal
+  document.getElementById('btnSaveToken').onclick  = saveToken;
+  document.getElementById('btnSkipToken').onclick  = ()=>document.getElementById('tokenModal').classList.remove('open');
+  document.getElementById('tokenModal').onclick    = e=>{if(e.target===e.currentTarget)document.getElementById('tokenModal').classList.remove('open');};
+  document.getElementById('btnToken').onclick      = openTokenModal;
 }
 
 // ═══════════════════════════════════════════
@@ -891,7 +1054,17 @@ function rAll(){
 
 // INIT
 bindEvents();
-rAll();
+rAll(); // render with local data first (fast)
+
+// Then load from GitHub if token exists
+if(ghToken){
+  ghLoad().then(data=>{
+    if(data){ D=data; saveLocal(D); rAll(); }
+  });
+} else {
+  // First time — show token setup
+  setTimeout(()=>document.getElementById('tokenModal').classList.add('open'), 800);
+}
 </script>
 </body>
 </html>
