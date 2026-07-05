@@ -362,7 +362,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 // ═══════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════
-const SK = 'mc8';
+const SK = 'mc9';
 const DEF = {
   weekLabel:'Jun W4 · 2026',
   spyNow:729.98, spyPrev:746.52,
@@ -380,10 +380,10 @@ const DEF = {
 };
 
 function load(){
-  try{const r=sessionStorage.getItem(SK);if(r)return JSON.parse(r);}catch(e){}
+  try{const r=localStorage.getItem(SK);if(r)return JSON.parse(r);}catch(e){}
   return JSON.parse(JSON.stringify(DEF));
 }
-function save(d){try{sessionStorage.setItem(SK,JSON.stringify(d));}catch(e){}}
+function save(d){try{localStorage.setItem(SK,JSON.stringify(d));}catch(e){}}
 
 let D = load();
 let lineChart = null;
