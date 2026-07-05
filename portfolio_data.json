@@ -19,9 +19,9 @@
     {
       "ticker": "QQQ",
       "name": "Nasdaq100 ETF",
-      "qty": 1.6187,
-      "avg": 632.27,
-      "cur": 706.52,
+      "qty": 1.652645583,
+      "avg": 634.29,
+      "cur": 712.6,
       "color": "#1864ab",
       "dca": true
     },
