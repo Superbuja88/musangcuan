@@ -37,9 +37,9 @@
     {
       "ticker": "MSFT",
       "name": "Microsoft",
-      "qty": 1.05,
-      "avg": 380,
-      "cur": 322.37,
+      "qty": 0.90755207,
+      "avg": 439.77,
+      "cur": 390.49,
       "color": "#107c10",
       "dca": false
     },
