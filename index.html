@@ -443,22 +443,22 @@ async function ghLoad(){
 }
 
 async function ghSave(data){
-  if(!ghToken) return false;
+  if(!ghToken){ showToast('⚠️ GitHub 토큰 없음'); return false; }
   try{
-    // Always fetch current SHA before saving to avoid conflict errors
-    if(!ghSHA){
-      const res = await fetch(GH_API,{
-        headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}
-      });
-      if(res.ok){ const j=await res.json(); ghSHA=j.sha; }
-    }
+    // 매번 최신 SHA 새로 가져오기 (충돌 방지)
+    const getRes = await fetch(GH_API,{
+      headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}
+    });
+    if(getRes.status===401){ showToast('❌ 토큰 오류 (401) — 토큰 재설정 필요'); return false; }
+    if(getRes.status===403){ showToast('❌ 권한 없음 (403) — repo 스코프 확인'); return false; }
+    if(getRes.ok){ const j=await getRes.json(); ghSHA=j.sha; }
+    else if(getRes.status!==404){ showToast('❌ GitHub 오류 ('+getRes.status+')'); return false; }
+    // 404 = 파일 없음 → 새로 생성 (SHA 불필요)
+
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))));
-    const body = {
-      message:'Portfolio update '+new Date().toLocaleDateString('id-ID'),
-      content
-    };
+    const body = { message:'Portfolio update '+new Date().toLocaleDateString('id-ID'), content };
     if(ghSHA) body.sha = ghSHA;
-    const res = await fetch(GH_API,{
+    const putRes = await fetch(GH_API,{
       method:'PUT',
       headers:{
         'Authorization':'token '+ghToken,
@@ -467,11 +467,13 @@ async function ghSave(data){
       },
       body:JSON.stringify(body)
     });
-    if(!res.ok){ console.error('ghSave failed', res.status, await res.text()); return false; }
-    const result = await res.json();
-    ghSHA = result.content.sha;
+    if(!putRes.ok){
+      showToast('❌ GitHub 저장 실패 (PUT '+putRes.status+')');
+      return false;
+    }
+    ghSHA = (await putRes.json()).content.sha;
     return true;
-  }catch(e){ console.error('ghSave error',e); return false; }
+  }catch(e){ showToast('❌ 네트워크 오류: '+e.message); return false; }
 }
 
 // Local fallback
