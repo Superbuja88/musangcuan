@@ -64,9 +64,9 @@
     {
       "ticker": "QLD",
       "name": "QQQ leverage",
-      "qty": 0.519964804,
-      "avg": 95.47,
-      "cur": 90.58,
+      "qty": 0.863273522,
+      "avg": 94.34,
+      "cur": 93.7,
       "color": "#96d35f",
       "dca": false
     }
