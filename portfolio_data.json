@@ -1,11 +1,11 @@
 {
-  "weekLabel": "Jul W2 Â· 2026",
-  "spyNow": 754.89,
-  "spyPrev": 729.98,
-  "qqqNow": 725.54,
-  "qqqPrev": 706.52,
-  "fxNow": 18075,
-  "fxPrev": 17860,
+  "weekLabel": "Jul W3· 2026",
+  "spyNow": 743.15,
+  "spyPrev": 754.89,
+  "qqqNow": 695.33,
+  "qqqPrev": 725.54,
+  "fxNow": 17923,
+  "fxPrev": 18075,
   "stocks": [
     {
       "ticker": "SPY",
@@ -103,6 +103,14 @@
       "spy": 754.89,
       "qqq": 725.54,
       "fx": 18075
+    },
+    {
+      "label": "Jul W3· 2026",
+      "port": 4110.78322402902,
+      "cost": 3968.64799134279,
+      "spy": 743.15,
+      "qqq": 695.33,
+      "fx": 17923
     }
   ]
 }
